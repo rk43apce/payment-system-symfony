@@ -49,7 +49,7 @@ class RateLimitService
                         'message' => 'Too many requests. Please try again later.',
                         'type' => 'rate_limit_error'
                     ],
-                    'request_id' => uniqid('req_', true)
+                    'request_id' => 'req_' . bin2hex(random_bytes(8))
                 ]),
                 429,
                 ['Content-Type' => 'application/json']

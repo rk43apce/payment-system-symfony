@@ -3,6 +3,7 @@
 namespace App\Validator;
 
 use App\DTO\CreatePaymentRequest;
+use App\DTO\TransferRequest;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -90,6 +91,36 @@ class PaymentValidator
         }
 
         return $dto;
+    }
+
+    /**
+     * Map and validate transfer data to DTO
+     */
+    public function mapAndValidateTransferData(array $data): TransferRequest|array
+    {
+        $dto = new TransferRequest();
+        $dto->sender_id = isset($data['sender_id']) ? (int) $data['sender_id'] : null;
+        $dto->recipient_id = isset($data['recipient_id']) ? (int) $data['recipient_id'] : null;
+        $dto->amount = isset($data['amount']) ? (int) $data['amount'] : null;
+        $dto->idempotency_key = $data['idempotency_key'] ?? null;
+
+        $errors = $this->validator->validate($dto);
+        if (count($errors) === 0) {
+            return $dto;
+        }
+
+        $errorDetails = [];
+        foreach ($errors as $error) {
+            $errorDetails[$error->getPropertyPath()] = $error->getMessage();
+        }
+
+        return [
+            'code' => 'validation_error',
+            'message' => 'Validation failed',
+            'type' => 'invalid_request_error',
+            'status' => 422,
+            'details' => $errorDetails
+        ];
     }
 
     /**

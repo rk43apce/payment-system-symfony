@@ -100,8 +100,8 @@ class PaymentService
                 $this->em->flush();
             }
 
-            // Simulate external system
-            $success = rand(0, 1);
+            // Simulate external payment processor call
+            $success = random_int(0, 1);
 
             if ($success) {
                 $payment->markSuccess();
