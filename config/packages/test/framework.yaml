@@ -1,0 +1,66 @@
+# Test Configuration
+# This file contains test-specific configuration
+
+framework:
+    test: true
+    session:
+        storage_factory_id: session.storage.factory.mock_file
+
+    # Cache configuration for tests
+    cache:
+        app: cache.adapter.redis
+        default_redis_provider: 'redis://127.0.0.1:6379'
+        pools:
+            app_cache:
+                adapter: cache.adapter.redis
+            doctrine_cache:
+                adapter: cache.adapter.redis
+
+doctrine:
+    dbal:
+        driver: pdo_mysql
+        host: 127.0.0.1
+        port: 3306
+        dbname: payshera_fund_transfer_test
+        user: root
+        password: ~
+        charset: utf8mb4
+    orm:
+        auto_generate_proxy_classes: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                is_bundle: false
+                type: attribute
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'App\Entity'
+                alias: App
+
+services:
+    # Override Redis service for testing
+    App\Service\RedisService:
+        arguments:
+            $cache: '@cache.app'
+            $logger: '@logger'
+            $redis: '@?Predis\Client'
+
+    # Test Redis client (optional, falls back to cache-only mode)
+    Predis\Client:
+        class: Predis\Client
+        arguments:
+            - { host: 127.0.0.1, port: 6379 }
+        calls:
+            - [ connect ]
+
+# Logging for tests
+monolog:
+    handlers:
+        main:
+            type: stream
+            path: '%kernel.logs_dir%/test.log'
+            level: debug
+        console:
+            type: console
+            process_psr_3_messages: false
+            channels: ['!event', '!doctrine']

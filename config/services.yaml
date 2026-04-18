@@ -21,3 +21,15 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    App\Service\RedisService:
+        class: App\Service\RedisService
+        factory: ['App\Service\RedisService', 'create']
+        arguments:
+            - '@cache.app'
+            - '@logger'
+
+    App\Service\RateLimitService:
+        arguments:
+            - '@App\Service\RedisService'
+            - '@logger'
