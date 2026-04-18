@@ -28,7 +28,6 @@ class BalanceService
 
         $balance = $this->cache->get($this->cacheKey($userId), function ($item) use ($userId) {
             $item->expiresAfter(60);
-            $item->beta(1.5);
             return $this->ledgerRepository->getBalance($userId);
         });
 
