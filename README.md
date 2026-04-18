@@ -1,4 +1,4 @@
-# Payshera Fund Transfer API
+# Fund Transfer API
 
 A production-grade fund transfer API built with Symfony 8, implementing ledger-based balance management, idempotent transactions, and distributed locking.
 
@@ -7,7 +7,7 @@ A production-grade fund transfer API built with Symfony 8, implementing ledger-b
 ## Submission Notes
 
 - Time spent: ~5 hours
-- AI tools used: Amazon Q and GitHub Copilot (Raptor mini) for coding, review and debugging
+- AI tools used: Amazon Q and GitHub Copilot for coding, review and debugging
 - Packaging: project includes `compose.yaml` and `compose.override.yaml` for Docker Compose-based setup. No standalone `Dockerfile` is included.
 
 ---
