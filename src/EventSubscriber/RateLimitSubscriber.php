@@ -56,29 +56,26 @@ class RateLimitSubscriber implements EventSubscriberInterface
 
     private function isPaymentApiRoute(string $path): bool
     {
-        // Apply rate limiting only to payment-related routes
-        return str_starts_with($path, '/payment');
+        return str_starts_with($path, '/transfer') || str_starts_with($path, '/balance');
     }
 
     private function getEndpointType(\Symfony\Component\HttpFoundation\Request $request): string
     {
-        $path = $request->getPathInfo();
+        $path   = $request->getPathInfo();
         $method = $request->getMethod();
 
-        // Determine endpoint type based on path and method
-        if ($path === '/payment' && $method === 'POST') {
-            return 'create_payment';
+        if ($path === '/transfer' && $method === 'POST') {
+            return 'transfer';
         }
 
-        if ($path === '/payment/process' && $method === 'POST') {
-            return 'process_payment';
+        if ($path === '/balance/add' && $method === 'POST') {
+            return 'balance_add';
         }
 
-        if (preg_match('#^/payment/[^/]+$#', $path) && $method === 'GET') {
-            return 'get_payment';
+        if (preg_match('#^/balance/\d+$#', $path) && $method === 'GET') {
+            return 'balance_get';
         }
 
-        // Default fallback
-        return 'payment_api';
+        return 'api';
     }
 }

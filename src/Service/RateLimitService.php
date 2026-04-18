@@ -69,11 +69,11 @@ class RateLimitService
     {
         // Define different rate limits for different endpoints
         $limits = [
-            'create_payment' => ['max_requests' => 50, 'window_seconds' => 60],   // 50 requests per minute
-            'process_payment' => ['max_requests' => 50, 'window_seconds' => 60],   // 50 requests per minute
-            'get_payment' => ['max_requests' => 100, 'window_seconds' => 60],      // 100 requests per minute
+            'transfer'    => ['max_requests' => 30,  'window_seconds' => 60],
+            'balance_add' => ['max_requests' => 20,  'window_seconds' => 60],
+            'balance_get' => ['max_requests' => 100, 'window_seconds' => 60],
         ];
 
-        return $limits[$endpoint] ?? ['max_requests' => 20, 'window_seconds' => 60]; // Default
+        return $limits[$endpoint] ?? ['max_requests' => 30, 'window_seconds' => 60];
     }
 }

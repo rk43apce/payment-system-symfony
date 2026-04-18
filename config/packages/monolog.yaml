@@ -1,17 +1,46 @@
 monolog:
-    channels: ['payment']
+    channels: ['transfer', 'balance']
     handlers:
         main:
             type: stream
             path: '%kernel.logs_dir%/%kernel.environment%.log'
             level: debug
             channels: ['!event']
-        payment:
+        transfer:
             type: stream
-            path: '%kernel.logs_dir%/payment.log'
-            level: info
-            channels: ['payment']
+            path: '%kernel.logs_dir%/transfer.log'
+            level: debug
+            channels: ['transfer']
+        balance:
+            type: stream
+            path: '%kernel.logs_dir%/balance.log'
+            level: debug
+            channels: ['balance']
         console:
             type: console
             process_psr_3_messages: false
             channels: ['!event', '!doctrine', '!console']
+
+when@prod:
+    monolog:
+        handlers:
+            main:
+                type: fingers_crossed
+                action_level: error
+                handler: nested
+                excluded_http_codes: [404, 405]
+                channels: ['!event']
+            nested:
+                type: stream
+                path: '%kernel.logs_dir%/%kernel.environment%.log'
+                level: debug
+            transfer:
+                type: stream
+                path: '%kernel.logs_dir%/transfer.log'
+                level: info
+                channels: ['transfer']
+            balance:
+                type: stream
+                path: '%kernel.logs_dir%/balance.log'
+                level: info
+                channels: ['balance']
