@@ -4,6 +4,14 @@ A production-grade fund transfer API built with Symfony 8, implementing ledger-b
 
 ---
 
+## Submission Notes
+
+- Time spent: ~5 hours
+- AI tools used: Amazon Q and GitHub Copilot (Raptor mini) for coding, review and debugging
+- Packaging: project includes `compose.yaml` and `compose.override.yaml` for Docker Compose-based setup. No standalone `Dockerfile` is included.
+
+---
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
@@ -278,6 +286,13 @@ Every `POST` request requires an `Idempotency-Key` header (enforced by `Idempote
 ### Distributed Locking
 
 Redis `SET NX EX` is used to prevent concurrent duplicate submissions. If Redis is unavailable, the system fails open and the database unique constraint on `idempotency_key` acts as the hard guard.
+
+### Security Notes
+
+- The app validates request payloads, enforces idempotency, and uses ledger-backed accounting to avoid balance drift.
+- The current implementation does not include authentication/authorization, so production deployment should protect the API and ensure the caller is authorized to debit the sender account.
+- Avoid logging sensitive tokens or idempotency keys in production logs.
+- Rate limiting is supported and should be enabled to reduce abuse of the transfer and top-up endpoints.
 
 ### Float Amount Handling
 
