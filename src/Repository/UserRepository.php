@@ -23,6 +23,11 @@ class UserRepository extends ServiceEntityRepository
         return $this->getEntityManager()->find(User::class, $id, LockMode::PESSIMISTIC_WRITE);
     }
 
+    public function findOneByEmail(string $email): ?User
+    {
+        return $this->findOneBy(['email' => $email]);
+    }
+
     //    /**
     //     * @return User[] Returns an array of User objects
     //     */

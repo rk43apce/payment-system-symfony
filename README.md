@@ -93,7 +93,8 @@ php bin/console doctrine:migrations:migrate --no-interaction
 user
 ├── id          INT
 ├── name        VARCHAR(255)
-└── email       VARCHAR(255)
+├── email       VARCHAR(255)
+└── created_at  DATETIME
 
 account_ledger                        ← source of truth for balances
 ├── id              INT
@@ -158,6 +159,46 @@ curl http://localhost:8000/balance/1
   "data": {
     "user_id": 1,
     "balance": 100.50
+  },
+  "request_id": "req_abc123"
+}
+```
+
+---
+
+### Create User Account
+
+```
+POST /users
+Headers:
+  Content-Type: application/json
+```
+
+**Request Body**
+
+| Field   | Type   | Required | Description                     |
+|---------|--------|----------|---------------------------------|
+| `name`  | string | Yes      | Full name of the account owner  |
+| `email` | string | Yes      | Email address for the account   |
+
+**Example**
+
+```bash
+curl -X POST http://localhost:8000/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com"}'
+```
+
+**Response `201`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "created_at": "2026-04-19 12:34:56"
   },
   "request_id": "req_abc123"
 }
