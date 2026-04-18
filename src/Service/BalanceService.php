@@ -3,6 +3,8 @@
 namespace App\Service;
 
 use App\Entity\AccountLedger;
+use App\Enum\LedgerReferenceType;
+use App\Enum\LedgerType;
 use App\Repository\AccountLedgerRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,7 +28,7 @@ class BalanceService
 
         $balance = $this->cache->get($this->cacheKey($userId), function ($item) use ($userId) {
             $item->expiresAfter(60);
-            $item->beta(1.5); // probabilistic early recompute to prevent stampede
+            $item->beta(1.5);
             return $this->ledgerRepository->getBalance($userId);
         });
 
@@ -44,7 +46,6 @@ class BalanceService
             throw new \InvalidArgumentException('User not found');
         }
 
-        // Idempotency: return current balance if this top-up was already processed
         $existing = $this->ledgerRepository->findByIdempotencyKey($idempotencyKey);
         if ($existing !== null) {
             $balance = $this->ledgerRepository->getBalance($userId);
@@ -57,11 +58,11 @@ class BalanceService
             $entry = new AccountLedger();
             $entry->setUser($user)
                 ->setAmount($amount)
-                ->setType(AccountLedger::TYPE_CREDIT)
-                ->setReferenceType(AccountLedger::REF_TOP_UP)
+                ->setType(LedgerType::CREDIT)
+                ->setReferenceType(LedgerReferenceType::TOP_UP)
                 ->setIdempotencyKey($idempotencyKey)
                 ->setReferenceId(null)
-                ->setCreatedAt(new \DateTime());
+                ->setCreatedAt(new \DateTimeImmutable());
 
             $this->em->persist($entry);
             $this->em->flush();
@@ -74,12 +75,10 @@ class BalanceService
 
         $this->cache->delete($this->cacheKey($userId));
 
-        $balance = $this->ledgerRepository->getBalance($userId);
-
-        return ['user_id' => $userId, 'balance' => $this->toDecimal($balance)];
+        return ['user_id' => $userId, 'balance' => $this->toDecimal($this->ledgerRepository->getBalance($userId))];
     }
 
-    public function cacheKey(int $userId): string
+    private function cacheKey(int $userId): string
     {
         return "user_balance_{$userId}";
     }

@@ -19,9 +19,6 @@ class User
     #[ORM\Column(length: 255)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $q = null;
-
     public function getId(): ?int
     {
         return $this->id;
@@ -51,15 +48,4 @@ class User
         return $this;
     }
 
-    public function getQ(): ?string
-    {
-        return $this->q;
-    }
-
-    public function setQ(string $q): static
-    {
-        $this->q = $q;
-
-        return $this;
-    }
 }

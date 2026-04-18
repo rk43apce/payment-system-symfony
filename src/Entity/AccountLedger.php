@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use App\Enum\LedgerReferenceType;
+use App\Enum\LedgerType;
 use App\Repository\AccountLedgerRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -11,12 +13,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['reference_id'], name: 'idx_ledger_reference')]
 class AccountLedger
 {
-    const TYPE_CREDIT = 'CREDIT';
-    const TYPE_DEBIT  = 'DEBIT';
-
-    const REF_TOP_UP   = 'TOP_UP';
-    const REF_TRANSFER = 'TRANSFER';
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
@@ -29,20 +25,20 @@ class AccountLedger
     #[ORM\Column(type: 'bigint')]
     private int $amount;
 
-    #[ORM\Column(type: 'string', length: 10)]
-    private string $type; // CREDIT | DEBIT
+    #[ORM\Column(type: 'string', length: 10, enumType: LedgerType::class)]
+    private LedgerType $type;
 
-    #[ORM\Column(type: 'string', length: 20)]
-    private string $referenceType; // TOP_UP | TRANSFER
+    #[ORM\Column(type: 'string', length: 20, enumType: LedgerReferenceType::class)]
+    private LedgerReferenceType $referenceType;
 
     #[ORM\Column(type: 'integer', nullable: true)]
-    private ?int $referenceId;
+    private ?int $referenceId = null;
 
-    #[ORM\Column(type: 'string', length: 64, unique: true, nullable: true)]
-    private ?string $idempotencyKey = null; // transfer.id or null for top-up
+    #[ORM\Column(type: 'string', length: 64, nullable: true)]
+    private ?string $idempotencyKey = null;
 
-    #[ORM\Column(type: 'datetime')]
-    private \DateTime $createdAt;
+    #[ORM\Column(type: 'datetime_immutable')]
+    private \DateTimeImmutable $createdAt;
 
     public function getId(): ?int { return $this->id; }
 
@@ -52,11 +48,11 @@ class AccountLedger
     public function getAmount(): int { return $this->amount; }
     public function setAmount(int $amount): static { $this->amount = $amount; return $this; }
 
-    public function getType(): string { return $this->type; }
-    public function setType(string $type): static { $this->type = $type; return $this; }
+    public function getType(): LedgerType { return $this->type; }
+    public function setType(LedgerType $type): static { $this->type = $type; return $this; }
 
-    public function getReferenceType(): string { return $this->referenceType; }
-    public function setReferenceType(string $referenceType): static { $this->referenceType = $referenceType; return $this; }
+    public function getReferenceType(): LedgerReferenceType { return $this->referenceType; }
+    public function setReferenceType(LedgerReferenceType $referenceType): static { $this->referenceType = $referenceType; return $this; }
 
     public function getReferenceId(): ?int { return $this->referenceId; }
     public function setReferenceId(?int $referenceId): static { $this->referenceId = $referenceId; return $this; }
@@ -64,6 +60,6 @@ class AccountLedger
     public function getIdempotencyKey(): ?string { return $this->idempotencyKey; }
     public function setIdempotencyKey(?string $idempotencyKey): static { $this->idempotencyKey = $idempotencyKey; return $this; }
 
-    public function getCreatedAt(): \DateTime { return $this->createdAt; }
-    public function setCreatedAt(\DateTime $createdAt): static { $this->createdAt = $createdAt; return $this; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
 }

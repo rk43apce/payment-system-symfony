@@ -76,7 +76,7 @@ final class TransferController extends AbstractController
                 'sender_id'    => $transfer->getSender()->getId(),
                 'recipient_id' => $transfer->getRecipient()->getId(),
                 'amount'       => round($transfer->getAmount() / 100, 2),
-                'status'       => $transfer->getStatus(),
+                'status'       => $transfer->getStatus()->value,
                 'created_at'   => $transfer->getCreatedAt()->format('Y-m-d H:i:s'),
             ], 201, $requestId);
 

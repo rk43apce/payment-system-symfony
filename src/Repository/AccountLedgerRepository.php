@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\AccountLedger;
+use App\Enum\LedgerType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,7 +20,7 @@ class AccountLedgerRepository extends ServiceEntityRepository
             ->select('SUM(CASE WHEN l.type = :credit THEN l.amount ELSE -l.amount END) AS balance')
             ->where('l.user = :userId')
             ->setParameter('userId', $userId)
-            ->setParameter('credit', AccountLedger::TYPE_CREDIT)
+            ->setParameter('credit', LedgerType::CREDIT->value)
             ->getQuery()
             ->getSingleScalarResult();
 

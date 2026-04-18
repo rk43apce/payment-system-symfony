@@ -4,7 +4,9 @@ namespace App\Service;
 
 use App\Entity\AccountLedger;
 use App\Entity\Transfer;
-use App\Entity\User;
+use App\Enum\LedgerReferenceType;
+use App\Enum\LedgerType;
+use App\Enum\TransferStatus;
 use App\Repository\AccountLedgerRepository;
 use App\Repository\TransferRepository;
 use App\Repository\UserRepository;
@@ -14,6 +16,10 @@ use Symfony\Contracts\Cache\CacheInterface;
 
 class TransferService
 {
+    private const MAX_DEADLOCK_RETRIES = 3;
+    private const MIN_AMOUNT           = 1;    // 1 paise minimum
+    private const MAX_AMOUNT           = 10_000_000_00; // ₹1,00,00,000 (1 crore)
+
     public function __construct(
         private EntityManagerInterface $em,
         private RedisService $redis,
@@ -24,19 +30,20 @@ class TransferService
         private AccountLedgerRepository $ledgerRepository
     ) {}
 
-    private const MAX_DEADLOCK_RETRIES = 3;
-
     public function transferFunds(int $senderId, int $recipientId, int $amount, string $idempotencyKey): Transfer
     {
         if ($senderId === $recipientId) {
             throw new \InvalidArgumentException('Sender and recipient must be different');
         }
 
-        if ($amount <= 0) {
-            throw new \InvalidArgumentException('Transfer amount must be positive');
+        if ($amount < self::MIN_AMOUNT) {
+            throw new \InvalidArgumentException('Transfer amount must be at least ₹0.01');
         }
 
-        // Idempotency check before acquiring lock
+        if ($amount > self::MAX_AMOUNT) {
+            throw new \InvalidArgumentException('Transfer amount exceeds maximum allowed limit');
+        }
+
         $existing = $this->transferRepository->findByIdempotencyKey($idempotencyKey);
         if ($existing !== null) {
             $this->logger->info('Duplicate transfer request, returning existing', [
@@ -46,12 +53,7 @@ class TransferService
             return $existing;
         }
 
-        $lockKey     = 'transfer_idem_' . $idempotencyKey;
-        $lockAcquired = $this->redis->acquireLock($lockKey, 30);
-
-        // If Redis is down, lock returns true (fail-open) but we still
-        // rely on the DB unique constraint on idempotency_key as the hard guard
-        if (!$lockAcquired) {
+        if (!$this->redis->acquireLock('transfer_idem_' . $idempotencyKey, 30)) {
             throw new \RuntimeException('Transfer is already being processed. Please retry shortly.');
         }
 
@@ -73,11 +75,11 @@ class TransferService
                         'idempotency_key' => $idempotencyKey,
                         'attempt'         => $attempt,
                     ]);
-                    usleep(50000 * $attempt); // 50ms, 100ms backoff
+                    usleep(50000 * $attempt);
                 }
             }
         } finally {
-            $this->redis->releaseLock($lockKey);
+            $this->redis->releaseLock('transfer_idem_' . $idempotencyKey);
         }
     }
 
@@ -86,8 +88,6 @@ class TransferService
         $this->em->beginTransaction();
 
         try {
-
-            // Lock rows in consistent order to prevent deadlocks
             [$firstId, $secondId] = $senderId < $recipientId
                 ? [$senderId, $recipientId]
                 : [$recipientId, $senderId];
@@ -102,48 +102,43 @@ class TransferService
                 throw new \InvalidArgumentException('Sender or recipient account not found');
             }
 
-            // Double-check idempotency inside transaction
             $existing = $this->transferRepository->findByIdempotencyKey($idempotencyKey);
             if ($existing !== null) {
                 $this->em->rollback();
                 return $existing;
             }
 
-            // Check sender has sufficient balance from ledger
             $senderBalance = $this->ledgerRepository->getBalance($senderId);
             if ($senderBalance < $amount) {
                 throw new \RuntimeException('Insufficient funds');
             }
 
-            // Create transfer record first to get the ID for ledger reference
             $transfer = new Transfer();
             $transfer->setSender($sender)
                 ->setRecipient($recipient)
                 ->setAmount($amount)
-                ->setStatus('COMPLETED')
+                ->setStatus(TransferStatus::COMPLETED)
                 ->setIdempotencyKey($idempotencyKey)
-                ->setCreatedAt(new \DateTime());
+                ->setCreatedAt(new \DateTimeImmutable());
 
             $this->em->persist($transfer);
-            $this->em->flush(); // flush to get transfer ID
+            $this->em->flush();
 
-            // Write debit entry for sender
             $debit = new AccountLedger();
             $debit->setUser($sender)
                 ->setAmount($amount)
-                ->setType(AccountLedger::TYPE_DEBIT)
-                ->setReferenceType(AccountLedger::REF_TRANSFER)
+                ->setType(LedgerType::DEBIT)
+                ->setReferenceType(LedgerReferenceType::TRANSFER)
                 ->setReferenceId($transfer->getId())
-                ->setCreatedAt(new \DateTime());
+                ->setCreatedAt(new \DateTimeImmutable());
 
-            // Write credit entry for recipient
             $credit = new AccountLedger();
             $credit->setUser($recipient)
                 ->setAmount($amount)
-                ->setType(AccountLedger::TYPE_CREDIT)
-                ->setReferenceType(AccountLedger::REF_TRANSFER)
+                ->setType(LedgerType::CREDIT)
+                ->setReferenceType(LedgerReferenceType::TRANSFER)
                 ->setReferenceId($transfer->getId())
-                ->setCreatedAt(new \DateTime());
+                ->setCreatedAt(new \DateTimeImmutable());
 
             $this->em->persist($debit);
             $this->em->persist($credit);
